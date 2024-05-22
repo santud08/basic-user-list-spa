@@ -41,6 +41,10 @@ app.put('/api/users/:id', (req, res) => {
 // Configure multer for file storage
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
+        const uploadDir = "public/uploads/images"
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
         cb(null, 'public/uploads/images/');
     },
     filename: function (req, file, cb) {

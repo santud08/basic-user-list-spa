@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div id="app">
+        <h1>User Management</h1>
+        <button type="button" class="btn btn-primary btn-sm float-right" data-toggle="modal" data-target="#formModal">
+            Add User
+        </button>
+        <table>
+            <thead>
+                <tr>
+                    <th><button onclick="sortTable('id')">ID</button></th>
+                    <th style="width: 40px;"><button onclick="sortTable('name')">Name</button></th>
+                    <th>Image</th>
+                    <th style="width: 50px;">Address</th>
+                    <th>Gender</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="userTable">
+                <!-- User rows will be dynamically generated here -->
+            </tbody>
+        </table>
+
+        <!-- The Add Modal -->
+        <div class="modal fade" id="formModal" tabindex="-1" aria-labelledby="formModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="formModalLabel">Add User</h5>
+                        <button type="button" id="add_close" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form  method="POST" id="addUploadForm" enctype="multipart/form-data" onsubmit="return false;">
+                            <div class="form-group">
+                                <label for="name">Name:</label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="image">Image:</label>
+                                <input type="file" class="form-control-file" id="image" name="image" accept="image/*" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="address">Address:</label>
+                                <textarea class="form-control" id="address" name="address" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Gender:</label><br>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" id="male" name="gender" value="male" required>
+                                    <label class="form-check-label" for="male">Male</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" id="female" name="gender" value="female" required>
+                                    <label class="form-check-label" for="female">Female</label>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- The Add Modal End-->
+        <!-- The Edit Modal -->
+        <div class="modal fade" id="editFormModal" tabindex="-1" aria-labelledby="editFormModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editFormModalLabel">Edit User</h5>
+                        <button type="button" id="edit_close" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="uploadForm" enctype="multipart/form-data" onsubmit="return false;">
+                            <div class="form-group">
+                                <label for="name">Name:</label>
+                                <input type="text" class="form-control" id="edit_name" name="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="image">Image:</label>
+                                <input type="file" class="form-control-file" id="edit_image" name="image" accept="image/*">
+                                <p id="display_image"></p>
+                            </div>
+                            <div class="form-group">
+                                <label for="address">Address:</label>
+                                <textarea class="form-control" id="edit_address" name="address" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Gender:</label><br>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" id="edit_male" name="edit_gender" value="male" required>
+                                    <label class="form-check-label" for="male">Male</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" id="edit_female" name="edit_gender" value="female" required>
+                                    <label class="form-check-label" for="female">Female</label>
+                                </div>
+                                <input type="hidden" id="_id" name="id" value=""/>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- The Edit Modal End-->
+        <!-- The View Modal -->
+        <div class="modal fade" id="viewModal" tabindex="-1" aria-labelledby="viewModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="viewModalLabel">View User Details</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" id="display_details">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- The View Modal End-->
+    </div>
+    <script>
+        let users = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchUsers();
+        });
+
+        function fetchUsers() {
+            fetch('/api/users')
+                .then(response => response.json())
+                .then(data => {
+                    users = data;
+                    renderTable();
+                });
+        }
+
+        function renderTable() {
+            const tableBody = document.getElementById('userTable');
+            tableBody.innerHTML = '';
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.name}</td>
+                    <td><img src="${user.image}" alt="${user.name}" width="50"></td>
+                    <td>${user.address}</td>
+                    <td>${user.gender}</td>
+                    <td class="actions">
+                        <button class="edit" onclick="editUser(${user.id})" data-toggle="modal" data-target="#editFormModal">Edit</button>
+                        <button class="delete" onclick="deleteUser(${user.id})">Delete</button>
+                        <button class="view" onclick="viewUser(${user.id})" data-toggle="modal" data-target="#viewModal">View</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        let sort_id = '';
+        let sort_name = '';
+        function sortTable(key) {
+            if(key=='id'){
+                if(sort_id=='asc'){
+                    users.sort((a, b) => a.id - b.id);
+                    sort_id = 'desc';
+                } else {
+                    users.sort((a, b) => b.id - a.id);
+                    sort_id = 'asc';
+                } 
+
+            } else {
+                if(sort_name=='asc'){
+                    users.sort((a, b) => a.name.localeCompare(b.name));
+                    sort_name = 'desc';
+                } else {
+                    users.sort((a, b) => b.name.localeCompare(a.name));
+                    sort_name = 'asc';
+                }
+            }
+            renderTable();
+        }
+
+        function editUser(id) {
+            const user = users.find(u => u.id === id);
+            document.getElementById("edit_name").value = user.name;
+            document.getElementById("edit_address").value = user.address;
+            document.getElementById("_id").value = id;
+            let radios = document.getElementsByName("edit_gender");
+            let value = user.gender.toLowerCase();
+
+            if (radios[0].value == value) {
+            radios[0].checked = true;
+            }else{
+            radios[1].checked = true;
+            }
+            document.getElementById("display_image").innerHTML = `<img src="${user.image}" alt="${user.name}" width="50">`;
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+            fetch('/api/update-users', {
+                method: 'post',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("edit_close").click();
+                fetchUsers();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        document.getElementById('addUploadForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+            fetch('/api/add-users', {
+                method: 'post',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("add_close").click();
+                document.getElementById("addUploadForm").reset();
+                fetchUsers();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        function updateUser(user) {
+            fetch(`/api/users/${user.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(user)
+            })
+            .then(response => response.json())
+            .then(() => {
+                fetchUsers();
+            });
+        }
+
+        function deleteUser(id) {
+           if(confirm("Are you sure to delete the user?")){
+                fetch(`/api/users/${id}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(() => {
+                    fetchUsers();
+                });
+            } 
+            return false;
+        }
+
+        function viewUser(id) {
+            const user = users.find(u => u.id === id);
+            document.getElementById("display_details").innerHTML = `<div>
+                    <p><span>Id:</span> ${user.id}</p>
+                    <p><span>Name:</span>${user.name}</p>
+                    <p><span>Address:</span>${user.address}</p>
+                    <p><span>Gender:</span>${user.gender}</p> 
+                    <p><img src="${user.image}" alt="${user.name}" style="height:auto !important;width:100% !important"></p>
+                    </div>
+                `;
+        }
+    </script>
+    <!-- bootstrap modal js -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
